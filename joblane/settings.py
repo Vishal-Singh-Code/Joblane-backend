@@ -72,6 +72,12 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 CORS_ALLOW_ALL_ORIGINS = False
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://joblane-frontend.vercel.app',
+    'https://*.onrender.com',  # optional wildcard for backend
+]
+
+
 ROOT_URLCONF = 'joblane.urls'
 
 TEMPLATES = [

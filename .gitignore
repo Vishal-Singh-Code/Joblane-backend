@@ -1,14 +1,30 @@
-venvjoblane/
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
+*.pyc
 .Python
+
+# Virtual Environment
+venv*/
+venvjoblane/
+
+# Django Stuff
 db.sqlite3
-.env
-staticfiles/
 media/
+staticfiles/
 *.log
+
+# Environment Variables
+.env
+
+# System files
 .DS_Store
+
+# IDEs and Editors
 .idea/
 .vscode/
+
+# Others
+*.sqlite3
