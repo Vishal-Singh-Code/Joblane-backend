@@ -74,7 +74,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 
 CSRF_TRUSTED_ORIGINS = [
     'https://joblane-frontend.vercel.app',
-    'https://*.onrender.com',  # optional wildcard for backend
+    'https://*.onrender.com',  
 ]
 
 
@@ -102,8 +102,9 @@ WSGI_APPLICATION = 'joblane.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
+    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'), conn_max_age=600, ssl_require=True)
 }
+
 
 # DATABASES = {
 #     'default': {
