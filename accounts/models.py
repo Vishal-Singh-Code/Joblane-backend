@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from cloudinary_storage.storage import MediaCloudinaryStorage # <--- IMPORT THIS
 
 class Profile(models.Model):
     ROLE_CHOICES = (
@@ -17,8 +18,8 @@ class Profile(models.Model):
     dob = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=10, blank=True)
     skills = models.JSONField(default=list)
-    resume = models.FileField(upload_to='resumes/', null=True, blank=True)
-    profile_pic = models.ImageField(upload_to='profiles/', null=True, blank=True)
+    resume = models.FileField(upload_to='resumes/', null=True, blank=True,        storage=MediaCloudinaryStorage())
+    profile_pic = models.ImageField(upload_to='profiles/', null=True, blank=True,storage=MediaCloudinaryStorage())
 
     def __str__(self):
         return self.name

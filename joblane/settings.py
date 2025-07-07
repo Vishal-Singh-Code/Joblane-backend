@@ -4,7 +4,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 import dj_database_url
 
-load_dotenv()
+load_dotenv() # Keep this at the very top to ensure env vars are loaded early
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,8 +37,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'jobs',
     'accounts.apps.AccountsConfig',
+    'cloudinary_storage', # Ensure this is before cloudinary if you use it for staticfiles, or simply placed here.
     'cloudinary',
-    'cloudinary_storage',
 ]
 
 MIDDLEWARE = [
@@ -67,12 +67,14 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 CORS_ALLOW_ALL_ORIGINS = False
 
+# --- PLACE CLOUDINARY_STORAGE CONFIGURATION HERE ---
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
     'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
     'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
 }
 
+# --- IMPORTANT: Move DEFAULT_FILE_STORAGE here, after CLOUDINARY_STORAGE is defined ---
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 
@@ -83,8 +85,10 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'DENY'
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://joblane-frontend.vercel.app',
-    'https://*.onrender.com',  
+    # 'https://joblane-frontend.vercel.app',
+    # 'https://*.onrender.com',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
 ]
 
 ROOT_URLCONF = 'joblane.urls'
@@ -114,13 +118,6 @@ DATABASES = {
     'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'), conn_max_age=600, ssl_require=True)
 }
 
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -155,10 +152,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# MEDIA_URL = '/media/'
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# MEDIA_URL = '/media/' # You can keep this for local development if you have any local media served
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # This is for local storage, keep commented out if only using Cloudinary for uploads
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
