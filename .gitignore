@@ -13,7 +13,6 @@ venvjoblane/
 # Django Stuff
 db.sqlite3
 media/
-staticfiles/
 *.log
 
 # Environment Variables

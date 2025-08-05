@@ -1,8 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
-from cloudinary_storage.storage import MediaCloudinaryStorage # <--- IMPORT THIS
-from .storages import RawMediaCloudinaryStorage  # Import the custom storage
-
+from cloudinary_storage.storage import MediaCloudinaryStorage 
+from .storages import RawMediaCloudinaryStorage
 
 class Profile(models.Model):
     ROLE_CHOICES = (
@@ -12,8 +11,7 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     name = models.CharField(max_length=100)
-
-    # Added fields
+    
     phone = models.CharField(max_length=15, blank=True)
     education = models.CharField(max_length=200, blank=True)
     location = models.CharField(max_length=100, blank=True)

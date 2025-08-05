@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny,IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -15,8 +15,6 @@ from accounts.models import Profile
 
 User = get_user_model()
 
-class CustomTokenObtainPairView(TokenObtainPairView):
-    serializer_class = CustomTokenObtainPairSerializer
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -36,6 +34,11 @@ class RegisterView(generics.CreateAPIView):
             "refresh": str(refresh),
             "role": role
         }, status=status.HTTP_201_CREATED)
+    
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
 
 class GoogleLoginView(APIView):
     permission_classes = [AllowAny]
@@ -46,7 +49,6 @@ class GoogleLoginView(APIView):
             return Response({"error": "Missing access_token"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Fetch user info from Google API
             user_info = requests.get(
                 "https://www.googleapis.com/oauth2/v1/userinfo",
                 params={"access_token": access_token}
@@ -82,6 +84,7 @@ class GoogleLoginView(APIView):
         except Exception as e:
             return Response({"error": "Google login failed", "details": str(e)}, status=500)
 
+
 class ProfileAPIView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
@@ -99,4 +102,14 @@ class ProfileAPIView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
 
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request):
+        try:
+            refresh_token = request.data["refresh_token"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response(status=205)
+        except Exception as e:
+            return Response(status=400)

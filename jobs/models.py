@@ -18,7 +18,6 @@ class Job(models.Model):
     location = models.CharField(max_length=100)
     ctc = models.CharField(max_length=50)
     experience = models.CharField(max_length=100)
-    start_date = models.DateField()
     deadline = models.DateField()
 
     job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES)
@@ -37,7 +36,7 @@ class Job(models.Model):
         return f"{self.title} at {self.company}"
 
 class SavedJob(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_jobs')
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
     saved_at = models.DateTimeField(auto_now_add=True)
 
@@ -54,7 +53,6 @@ class Application(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='applications')
     applied_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
-
 
     class Meta: 
         unique_together = ('applicant', 'job')
