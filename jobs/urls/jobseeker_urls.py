@@ -4,6 +4,7 @@ from jobs.views.jobseeker_views import (
     AppliedJobsView,
     SaveJobView,
     SavedJobsView,
+    get_filter_options
 )
 
 urlpatterns = [
@@ -12,4 +13,5 @@ urlpatterns = [
     
     path('jobs/<int:id>/save/', SaveJobView.as_view(), name='save-job'),
     path('saved/', SavedJobsView.as_view(), name='saved-jobs'),
+    path('filters/', get_filter_options, name="filter_optioins"),
 ]

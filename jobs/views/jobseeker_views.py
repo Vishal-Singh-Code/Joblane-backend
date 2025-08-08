@@ -62,3 +62,18 @@ class SavedJobsView(APIView):
         serializer = JobBasicSerializer(jobs, many=True)
         return Response(serializer.data)
 
+
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+@api_view(['GET'])
+def get_filter_options(request):
+    locations = Job.objects.values_list('location', flat=True).distinct()
+    profiles = Job.objects.values_list('title', flat=True).distinct()
+    
+    return Response({
+        "locations": sorted(locations),
+        "profiles": sorted(profiles),
+    })
+

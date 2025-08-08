@@ -31,7 +31,7 @@ class JobBasicSerializer(serializers.ModelSerializer):
     applicant_count = serializers.SerializerMethodField()
     class Meta:
         model = Job
-        fields = ['id', 'title', 'company', 'location', 'ctc', 'job_type', 'logo_url', 'created_at','deadline', 'applicant_count']
+        fields = ['id', 'title', 'company', 'location', 'ctc', 'job_type','experience', 'logo_url', 'created_at', 'deadline', 'applicant_count']
         read_only_fields = ['created_at', 'deadline'] 
     def get_applicant_count(self, obj):
         return Application.objects.filter(job=obj).count()
