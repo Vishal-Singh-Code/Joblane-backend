@@ -46,7 +46,7 @@ class SavedJob(models.Model):
 class Application(models.Model):
     STATUS_CHOICES = (
         ('Pending', 'Pending'),
-        ('Approved', 'Approved'),
+        ('Shortlisted', 'Shortlisted'),
         ('Rejected', 'Rejected'),
     )
     applicant = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='applications')

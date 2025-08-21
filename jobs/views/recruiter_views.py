@@ -16,23 +16,6 @@ from jobs.serializers.common_serializers import JobSerializer, JobBasicSerialize
 
 
 
-# class CreateJobAPIView(generics.CreateAPIView):
-#     queryset = Job.objects.all()
-#     serializer_class = JobSerializer
-#     permission_classes = [IsAuthenticated] 
-#     def perform_create(self, serializer):
-#         if self.request.user.profile.role != 'recruiter':
-#             raise PermissionDenied("Only recruiters can create jobs.")
-#         serializer.save(created_by=self.request.user)
-
-# class RecruiterJobsView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request):
-#         jobs = Job.objects.filter(created_by=request.user).order_by('-created_at')
-#         serializer = JobSerializer(jobs, many=True)
-#         return Response(serializer.data)
-
 class RecruiterJobViewSet(viewsets.ModelViewSet):
     serializer_class = JobSerializer
     permission_classes = [IsAuthenticated]
@@ -49,15 +32,6 @@ class RecruiterJobViewSet(viewsets.ModelViewSet):
         if self.request.user.profile.role != 'recruiter':
             raise PermissionDenied("Only recruiters can create jobs.")
         serializer.save(created_by=self.request.user)
-
-# class RecruiterApplicantsView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request):
-#         recruiter_jobs = Job.objects.filter(created_by=request.user)
-#         applications = Application.objects.filter(job__in=recruiter_jobs).select_related('applicant__user', 'job')
-#         serializer = ApplicationSerializer(applications, many=True, context={'request': request})
-#         return Response(serializer.data)
 
 class JobApplicantsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -97,7 +71,7 @@ def update_application_status(request, pk):
 
         new_status = request.data.get('status')
 
-        if new_status not in ['Pending', 'Approved', 'Rejected']:
+        if new_status not in ['Pending', 'Shortlisted', 'Rejected']:
             return Response({'error': 'Invalid status value'}, status=400)
 
         application.status = new_status
