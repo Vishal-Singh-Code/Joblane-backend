@@ -9,7 +9,16 @@ class Profile(models.Model):
         ('recruiter', 'Recruiter'),
     )
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    is_verified = models.BooleanField(default=False)
+
+    # OTP fields
+    otp_hash = models.CharField(max_length=64, blank=True, null=True)
+    otp_created_at = models.DateTimeField(blank=True, null=True)
+    otp_attempts = models.IntegerField(default=0)         # failed tries for current OTP
+    last_otp_sent_at = models.DateTimeField(blank=True, null=True)
+    otp_resend_count = models.IntegerField(default=0)     # useful for rate-limiting resends
+
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='jobseeker')
     name = models.CharField(max_length=100)
     
     phone = models.CharField(max_length=15, blank=True)

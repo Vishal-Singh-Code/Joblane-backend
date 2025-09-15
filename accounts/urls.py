@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import CustomTokenObtainPairView, RegisterView, GoogleLoginView, ProfileAPIView,LogoutView
+from .views import CustomTokenObtainPairView, RegisterView, GoogleLoginView, ProfileAPIView,LogoutView,SendOtpView, VerifyOtpView
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -9,6 +9,8 @@ urlpatterns = [
     path('google/', GoogleLoginView.as_view(), name='google_login'),
     path('profile/', ProfileAPIView.as_view(), name='user-profile'),
     path('logout/', LogoutView.as_view(), name='logout'),
+     path("send-otp/", SendOtpView.as_view(), name="send-otp"),
+    path("verify-otp/", VerifyOtpView.as_view(), name="verify-otp"),
 
 ]
 

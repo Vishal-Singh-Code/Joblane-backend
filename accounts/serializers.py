@@ -19,12 +19,23 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         name = validated_data.pop('name')
         role = validated_data.pop('role')
+
         user = User.objects.create_user(**validated_data)
+
         user.profile.name = name
         user.profile.role = role
         user.profile.save()
-        return user
 
+        return user
+    
+# ===== OTP Request =====
+class SendOtpSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+# ===== OTP Verification =====
+class VerifyOtpSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
