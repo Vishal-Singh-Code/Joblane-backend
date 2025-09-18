@@ -1,5 +1,8 @@
 # Third-party libraries
 import requests
+from datetime import timedelta
+from django.core import signing
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from rest_framework import generics, status
 from rest_framework.views import APIView
@@ -10,58 +13,146 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.parsers import MultiPartParser, FormParser
 
 # Local imports
-from .serializers import CustomTokenObtainPairSerializer, RegisterSerializer, ProfileSerializer
-from accounts.models import Profile
+from .serializers import RegisterSerializer, VerifyOtpSerializer, SendOtpSerializer,CustomTokenObtainPairSerializer, ProfileSerializer, ForgotPasswordSerializer, VerifyForgotOtpSerializer, ResendForgotOtpSerializer, ResetPasswordSerializer
+from .models import Profile, PendingUser
+from .utils import hash_otp, OTP_EXPIRY_MINUTES, send_otp_email, generate_otp
+
 
 User = get_user_model()
 
-
-# class RegisterView(generics.CreateAPIView):
-#     queryset = User.objects.all()
-#     permission_classes = (AllowAny,)
-#     serializer_class = RegisterSerializer
-
-#     def create(self, request, *args, **kwargs):
-#         serializer = self.get_serializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         user = serializer.save()
-
-#         refresh = RefreshToken.for_user(user)
-#         role = user.profile.role
-
-#         return Response({
-#             "access": str(refresh.access_token),
-#             "refresh": str(refresh),
-#             "role": role
-#         }, status=status.HTTP_201_CREATED)
-
+# ===== Registration View =====
 class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
+    queryset = PendingUser.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = RegisterSerializer
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        email = serializer.validated_data["email"]
 
-        # Mark as unverified (until OTP is confirmed)
-        user.profile.is_verified = False
-        user.profile.save()
+        # Check if PendingUser already exists
+        pending_user, created = PendingUser.objects.get_or_create(email=email)
+        # Update fields if user is already pending
+        pending_user.username = serializer.validated_data.get("username", pending_user.username)
+        pending_user.name = serializer.validated_data.get("name", pending_user.name)
+        pending_user.role = serializer.validated_data.get("role", pending_user.role)
+        raw_password = serializer.validated_data["password"]
+        pending_user.set_password(raw_password)
+        pending_user.save()
 
-        # Send OTP email
-        success, msg = send_otp_email(user, purpose="account verification")
+        # Send OTP
+        success, msg = send_otp_email(
+            obj=pending_user,
+            email=pending_user.email,
+            name=pending_user.name,
+            purpose="account verification"
+        )
 
         return Response({
-            "message": "User registered successfully. Please verify OTP sent to your email.",
+            "message": "Pending registration created. Please verify OTP sent to your email.",
             "otp_status": msg
         }, status=status.HTTP_201_CREATED)
-    
 
+
+# ===== OTP Verification View =====
+class VerifyOtpView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = VerifyOtpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        otp = serializer.validated_data["otp"]
+
+        # Fetch pending user
+        try:
+            pending_user = PendingUser.objects.get(email=email)
+        except PendingUser.DoesNotExist:
+            return Response({"non_field_errors": ["No pending user found with this email."]}, status=404)
+
+        # OTP validation
+        if not pending_user.otp_hash:
+            return Response({"error": "No OTP requested."}, status=400)
+
+        if timezone.now() - pending_user.otp_created_at > timedelta(minutes=OTP_EXPIRY_MINUTES):
+            return Response({"error": "OTP expired."}, status=400)
+
+        if hash_otp(otp) != pending_user.otp_hash:
+            pending_user.otp_attempts += 1
+            pending_user.save(update_fields=["otp_attempts"])
+            return Response({"error": "Invalid OTP."}, status=400)
+
+        # Check for existing User with same username/email
+        if User.objects.filter(username=pending_user.username).exists():
+            return Response({"error": "Username already taken. Choose another."}, status=400)
+        if User.objects.filter(email=pending_user.email).exists():
+            return Response({"error": "Email already registered. Please login."}, status=400)
+
+        # OTP verified → create real User
+        user = User.objects.create(
+            username=pending_user.username,
+            email=pending_user.email,
+            password=pending_user.password,  
+            is_active=True                   
+        )
+
+        # Update Profile
+        profile = user.profile
+        profile.name = pending_user.name
+        profile.role = pending_user.role
+        profile.is_verified = True
+        profile.save()
+
+        # Delete PendingUser
+        pending_user.delete()
+
+        # Generate JWT
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            "message": "OTP verified successfully! Registration complete.",
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "role": profile.role
+        })
+
+
+# ===== OTP Sent View =====
+class SendOtpView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = SendOtpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+
+        try:
+            pending_user = PendingUser.objects.get(email=email)
+        except PendingUser.DoesNotExist:
+            return Response({"error": "No pending registration found"}, status=404)
+
+        success, msg = send_otp_email(
+            obj=pending_user,
+            email=pending_user.email,
+            name=pending_user.name,
+            purpose="account verification"
+        )
+
+        if success:
+            return Response({"message": msg}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
+        
+    
+# ===== Login View =====
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 
+# ===== Google Login View =====
 class GoogleLoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -107,6 +198,7 @@ class GoogleLoginView(APIView):
             return Response({"error": "Google login failed", "details": str(e)}, status=500)
 
 
+# ===== Profile View =====
 class ProfileAPIView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
@@ -124,6 +216,8 @@ class ProfileAPIView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
 
+
+# ===== Logout View=====
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -137,82 +231,130 @@ class LogoutView(APIView):
             return Response(status=400)
 
 
+# Token config
+RESET_TOKEN_SALT = "password-reset"
+RESET_TOKEN_MAX_AGE_SECONDS = 15 * 60  # 15 minutes (adjust as desired)
 
 
-
-from rest_framework.views import APIView
-from .serializers import VerifyOtpSerializer
-from .utils import hash_otp, OTP_EXPIRY_MINUTES
-from django.utils import timezone
-
-class VerifyOtpView(APIView):
+# ===== Forgot Password =====
+class ForgotPasswordView(APIView):
     permission_classes = (AllowAny,)
 
     def post(self, request):
-        serializer = VerifyOtpSerializer(data=request.data)
+        serializer = ForgotPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         email = serializer.validated_data["email"]
-        otp = serializer.validated_data["otp"]
 
         try:
             user = User.objects.get(email=email)
             profile = user.profile
         except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=404)
+            # Privacy: don't leak existence of account
+            return Response({"message": "If an account exists, an OTP has been sent."})
 
-        # OTP checks
-        if not profile.otp_hash:
-            return Response({"error": "No OTP requested"}, status=400)
+        # Generate OTP
+        otp = generate_otp()
+        profile.otp_hash = hash_otp(otp)
+        profile.otp_created_at = timezone.now()
+        profile.otp_attempts = 0
+        profile.otp_resend_count = 0
+        profile.save(update_fields=["otp_hash", "otp_created_at", "otp_attempts", "otp_resend_count"])
 
-        if timezone.now() - profile.otp_created_at > timezone.timedelta(minutes=OTP_EXPIRY_MINUTES):
-            return Response({"error": "OTP expired"}, status=400)
+        send_otp_email(obj=profile, email=user.email, name=profile.name or user.username, purpose="password reset")
 
-        if hash_otp(otp) != profile.otp_hash:
-            profile.otp_attempts += 1
-            profile.save()
-            return Response({"error": "Invalid OTP"}, status=400)
+        return Response({"message": "If an account exists, an OTP has been sent."})
 
-        # Success
-        profile.is_verified = True
-        profile.otp_hash = None
-        profile.save()
-
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "message": "OTP verified successfully!",
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-            "role": profile.role
-        })
-
-
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework import status
-from django.contrib.auth.models import User
-from .serializers import SendOtpSerializer
-from .utils import send_otp_email
-
-
-class SendOtpView(APIView):
+class VerifyForgotOtpView(APIView):
     permission_classes = (AllowAny,)
 
     def post(self, request):
-        serializer = SendOtpSerializer(data=request.data)
+        
+        serializer = VerifyForgotOtpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         email = serializer.validated_data["email"]
+        otp = serializer.validated_data["otp"]
+        try:
+            user = User.objects.get(email=email)
+            profile = user.profile
+        except User.DoesNotExist:
+            return Response({"non_field_errors": ["Invalid request."]}, status=400)
 
+        if not profile.otp_hash:
+            return Response({"error": "No OTP requested."}, status=400)
+
+        if timezone.now() - profile.otp_created_at > timedelta(minutes=OTP_EXPIRY_MINUTES):
+            return Response({"error": "OTP expired."}, status=400)
+
+        if hash_otp(otp) != profile.otp_hash:
+            profile.otp_attempts += 1
+            profile.save(update_fields=["otp_attempts"])
+            return Response({"error": "Invalid OTP."}, status=400)
+
+        # OTP verified → clear OTP
+        profile.otp_hash = None
+        profile.otp_created_at = None
+        profile.otp_attempts = 0
+        profile.save(update_fields=["otp_hash", "otp_created_at", "otp_attempts"])
+
+        # Create signed reset token
+        reset_token = signing.dumps({"email": email}, salt=RESET_TOKEN_SALT)
+        return Response({"message": "OTP verified.", "reset_token": reset_token})
+
+class ResendForgotOtpView(generics.GenericAPIView):
+    serializer_class = ResendForgotOtpSerializer
+    permission_classes = (AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.validated_data["user"]
+        profile = user.profile
+
+        # Rate limit check
+        if profile.otp_resend_count >= 5 and profile.last_otp_sent_at and \
+           (timezone.now() - profile.last_otp_sent_at).seconds < 3600:
+            return Response({"error": "Too many OTP requests. Try again later."}, status=429)
+
+        # Call utils — this will generate OTP, hash it, save, send mail
+        success, msg = send_otp_email(profile, user.email, profile.name or user.username, purpose="password reset")
+
+        if not success:
+            return Response({"error": msg}, status=400)
+
+        return Response({"message": msg})
+
+class ResetPasswordView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        token = serializer.validated_data["reset_token"]
+        new_password = serializer.validated_data["password"]
+
+        try:
+            data = signing.loads(token, salt=RESET_TOKEN_SALT, max_age=RESET_TOKEN_MAX_AGE_SECONDS)
+        except signing.SignatureExpired:
+            return Response({"error": "Reset token expired."}, status=400)
+        except signing.BadSignature:
+            return Response({"error": "Invalid reset token."}, status=400)
+
+        email = data.get("email")
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response({"error": "User with this email does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Invalid reset token."}, status=400)
 
-        success, msg = send_otp_email(user, purpose="account verification")
+        user.set_password(new_password)
+        user.save()
 
-        if success:
-            return Response({"message": msg}, status=status.HTTP_200_OK)
-        else:
-            return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
+        profile = user.profile
+        profile.otp_hash = None
+        profile.otp_created_at = None
+        profile.otp_attempts = 0
+        profile.save(update_fields=["otp_hash", "otp_created_at", "otp_attempts"])
+
+        return Response({"message": "Password reset successful. Please log in with your new password."})

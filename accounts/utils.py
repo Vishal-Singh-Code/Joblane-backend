@@ -18,43 +18,46 @@ def generate_otp() -> str:
     """Generate a random numeric OTP."""
     return f"{random.randint(0, 10**OTP_LENGTH - 1):0{OTP_LENGTH}d}"
 
-
 def hash_otp(otp: str) -> str:
     """Hash OTP with SHA-256 (never store raw OTP)."""
     return hashlib.sha256(otp.encode()).hexdigest()
 
-
-def send_otp_email(user, purpose: str = "verify"):
-    profile = user.profile
+def send_otp_email(obj, email: str, name: str, purpose: str = "verify"):
+    """
+    Works for both User.profile and PendingUser, as long as fields exist.
+    - obj must have: otp_hash, otp_created_at, last_otp_sent_at, otp_resend_count, otp_attempts
+    - email is recipient's email
+    - name is recipient's name
+    """
     now = timezone.now()
 
     # === Cooldown check ===
-    if profile.last_otp_sent_at and (now - profile.last_otp_sent_at).total_seconds() < RESEND_COOLDOWN_SECONDS:
+    if obj.last_otp_sent_at and (now - obj.last_otp_sent_at).total_seconds() < RESEND_COOLDOWN_SECONDS:
         return False, "OTP recently sent. Please wait before requesting again."
 
     # === Daily resend limit ===
-    if profile.otp_resend_count >= DAILY_RESEND_LIMIT:
-        if profile.last_otp_sent_at and profile.last_otp_sent_at.date() < now.date():
-            profile.otp_resend_count = 0
+    if obj.otp_resend_count >= DAILY_RESEND_LIMIT:
+        if obj.last_otp_sent_at and obj.last_otp_sent_at.date() < now.date():
+            obj.otp_resend_count = 0
         else:
             return False, "Daily OTP limit reached. Try again tomorrow."
 
     # === Generate new OTP ===
     raw_otp = generate_otp()
-    profile.otp_hash = hash_otp(raw_otp)
-    profile.otp_created_at = now
-    profile.last_otp_sent_at = now
-    profile.otp_resend_count += 1
-    profile.otp_attempts = 0
-    profile.save()
+    obj.otp_hash = hash_otp(raw_otp)
+    obj.otp_created_at = now
+    obj.last_otp_sent_at = now
+    obj.otp_resend_count += 1
+    obj.otp_attempts = 0
+    obj.save()
 
     # === Email content ===
     subject = f"JobLane - Your OTP for {purpose.capitalize()}"
-    from_email = f"JobLane <{settings.DEFAULT_FROM_EMAIL}>"
-    recipient_list = [user.email]
+    from_email = settings.DEFAULT_FROM_EMAIL
+    recipient_list = [email]
 
     text_content = f"""
-Hello {profile.name},
+Hello {name},
 
 Your OTP for JobLane ({purpose}) is: {raw_otp}
 ⚠️ It will expire in {OTP_EXPIRY_MINUTES} minutes.
@@ -83,7 +86,7 @@ If you did not request this, please ignore this email.
             <tr>
               <td style="padding:30px;">
                 <h2 style="margin-top:0; font-size:20px; font-weight:400;">
-  Hello <span style="color:#2563eb; font-weight:600;">{profile.name}</span>,
+  Hello <span style="color:#2563eb; font-weight:600;">{name}</span>,
 </h2>
 
                 <p style="font-size:16px; line-height:1.6;">Your OTP for <strong>JobLane</strong> ({purpose}) is:</p>
@@ -115,12 +118,13 @@ If you did not request this, please ignore this email.
 
     """
 
+
     try:
         msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
     except Exception as e:
-        logger.error("Failed to send OTP email to %s: %s", user.email, str(e))
+        logger.error("Failed to send OTP email to %s: %s", email, str(e))
         return False, "Failed to send OTP. Please try again."
 
     return True, "OTP sent successfully."
