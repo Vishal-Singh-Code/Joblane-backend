@@ -61,6 +61,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 CORS_ALLOW_ALL_ORIGINS = False
 
+
 # --- PLACE CLOUDINARY_STORAGE CONFIGURATION HERE ---
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
@@ -79,8 +80,8 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'DENY'
 
 CSRF_TRUSTED_ORIGINS = [
-    # 'https://joblane-frontend.vercel.app',
-    # 'https://*.onrender.com',
+    'https://joblane-frontend.vercel.app',
+    'https://*.onrender.com',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 ]
@@ -159,14 +160,24 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "JobLane <noreply@joblane.com>")
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+# EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+# EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+# EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+# EMAIL_USE_TLS = True
+# DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "JobLane <noreply@joblane.com>")
 
 # for Development only
 # EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # DEFAULT_FROM_EMAIL = "noreply@joblane.com"
+
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp-relay.brevo.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv("BREVO_EMAIL")       # Your verified sender email
+EMAIL_HOST_PASSWORD = os.getenv("BREVO_SMTP_KEY") # Brevo SMTP key
+DEFAULT_FROM_EMAIL = os.getenv("BREVO_EMAIL")
+
