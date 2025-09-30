@@ -13,6 +13,17 @@ OTP_EXPIRY_MINUTES = 5
 RESEND_COOLDOWN_SECONDS = 30
 DAILY_RESEND_LIMIT = 10
 
+from threading import Thread
+
+def send_otp_email_async(obj, email, name, purpose="verify"):
+    def task():
+        try:
+            send_otp_email(obj, email, name, purpose)
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to send OTP email to {email}: {e}")
+    Thread(target=task).start()
+
 
 def generate_otp() -> str:
     """Generate a random numeric OTP."""
