@@ -64,8 +64,8 @@ def send_otp_email(obj, email: str, name: str, purpose: str = "verify"):
 
     # === Email content ===
     subject = f"JobLane - Your OTP for {purpose.capitalize()}"
-    from_email = settings.DEFAULT_FROM_EMAIL
-    recipient_list = [email]
+    # from_email = settings.DEFAULT_FROM_EMAIL
+    # recipient_list = [email]
 
     text_content = f"""
 Hello {name},
@@ -130,12 +130,35 @@ If you did not request this, please ignore this email.
     """
 
 
-    try:
-        msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
-        msg.attach_alternative(html_content, "text/html")
-        msg.send(fail_silently=False)
-    except Exception as e:
-        logger.error("Failed to send OTP email to %s: %s", email, str(e))
+    # try:
+    #     msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
+    #     msg.attach_alternative(html_content, "text/html")
+    #     msg.send(fail_silently=False)
+    # except Exception as e:
+    #     logger.error("Failed to send OTP email to %s: %s", email, str(e))
+    #     return False, "Failed to send OTP. Please try again."
+    import requests
+
+    BREVO_API_KEY = settings.BREVO_API_KEY
+
+    payload = {
+        "sender": {"name": "Joblane", "email": "www.vishal123singh007@gmail.com"},
+        "to": [{"email": email, "name": name}],
+        "subject": subject,
+        "htmlContent": html_content,
+        "textContent": text_content
+    }
+
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+    }
+
+    response = requests.post("https://api.brevo.com/v3/smtp/email", json=payload, headers=headers)
+
+    if response.status_code >= 400:
+        logger.error(f"Failed to send OTP email to {email}: {response.text}")
         return False, "Failed to send OTP. Please try again."
 
     return True, "OTP sent successfully."
