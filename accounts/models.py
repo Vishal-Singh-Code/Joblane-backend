@@ -16,9 +16,9 @@ class Profile(models.Model):
     # OTP fields
     otp_hash = models.CharField(max_length=64, blank=True, null=True)
     otp_created_at = models.DateTimeField(blank=True, null=True)
-    otp_attempts = models.IntegerField(default=0)         # failed tries for current OTP
+    otp_attempts = models.IntegerField(default=0)      
     last_otp_sent_at = models.DateTimeField(blank=True, null=True)
-    otp_resend_count = models.IntegerField(default=0)     # useful for rate-limiting resends
+    otp_resend_count = models.IntegerField(default=0) 
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='jobseeker')
     name = models.CharField(max_length=100)
@@ -43,7 +43,7 @@ class PendingUser(models.Model):
 
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150)
-    password = models.CharField(max_length=128)  # store hashed password
+    password = models.CharField(max_length=128)
     name = models.CharField(max_length=100)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='jobseeker')
 

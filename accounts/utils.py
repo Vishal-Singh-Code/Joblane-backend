@@ -1,9 +1,11 @@
 import random
 import hashlib
 import logging
+import requests
 from django.utils import timezone
-from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
+
+BREVO_API_KEY = settings.BREVO_API_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,6 @@ def send_otp_email_async(obj, email, name, purpose="verify"):
             import logging
             logging.error(f"Failed to send OTP email to {email}: {e}")
     Thread(target=task).start()
-
 
 def generate_otp() -> str:
     """Generate a random numeric OTP."""
@@ -64,8 +65,6 @@ def send_otp_email(obj, email: str, name: str, purpose: str = "verify"):
 
     # === Email content ===
     subject = f"JobLane - Your OTP for {purpose.capitalize()}"
-    # from_email = settings.DEFAULT_FROM_EMAIL
-    # recipient_list = [email]
 
     text_content = f"""
 Hello {name},
@@ -128,18 +127,6 @@ If you did not request this, please ignore this email.
 </html>
 
     """
-
-
-    # try:
-    #     msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
-    #     msg.attach_alternative(html_content, "text/html")
-    #     msg.send(fail_silently=False)
-    # except Exception as e:
-    #     logger.error("Failed to send OTP email to %s: %s", email, str(e))
-    #     return False, "Failed to send OTP. Please try again."
-    import requests
-
-    BREVO_API_KEY = settings.BREVO_API_KEY
 
     payload = {
         "sender": {"name": "Joblane", "email": "www.vishal123singh007@gmail.com"},

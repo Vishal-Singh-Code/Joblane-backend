@@ -15,9 +15,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 # Local imports
 from .serializers import RegisterSerializer, VerifyOtpSerializer, SendOtpSerializer,CustomTokenObtainPairSerializer, ProfileSerializer, ForgotPasswordSerializer, VerifyForgotOtpSerializer, ResendForgotOtpSerializer, ResetPasswordSerializer
 from .models import Profile, PendingUser
-from .utils import hash_otp, OTP_EXPIRY_MINUTES, send_otp_email, generate_otp
-from .utils import send_otp_email_async
-
+from .utils import hash_otp, OTP_EXPIRY_MINUTES, generate_otp, send_otp_email_async
 
 
 User = get_user_model()
@@ -44,12 +42,6 @@ class RegisterView(generics.CreateAPIView):
         pending_user.save()
 
         # Send OTP
-        # success, msg = send_otp_email(
-        #     obj=pending_user,
-        #     email=pending_user.email,
-        #     name=pending_user.name,
-        #     purpose="account verification"
-        # )
         send_otp_email_async(
         obj=pending_user,
         email=pending_user.email,
@@ -143,12 +135,6 @@ class SendOtpView(APIView):
         except PendingUser.DoesNotExist:
             return Response({"error": "No pending registration found"}, status=404)
 
-        # success, msg = send_otp_email(
-        #     obj=pending_user,
-        #     email=pending_user.email,
-        #     name=pending_user.name,
-        #     purpose="account verification"
-        # )
         send_otp_email_async(
         obj=pending_user,
         email=pending_user.email,
@@ -277,7 +263,6 @@ class ForgotPasswordView(APIView):
         profile.otp_resend_count = 0
         profile.save(update_fields=["otp_hash", "otp_created_at", "otp_attempts", "otp_resend_count"])
 
-        # send_otp_email(obj=profile, email=user.email, name=profile.name or user.username, purpose="password reset")
         send_otp_email_async(profile, user.email, profile.name or user.username, purpose="password reset")
 
 
@@ -337,7 +322,6 @@ class ResendForgotOtpView(generics.GenericAPIView):
             return Response({"error": "Too many OTP requests. Try again later."}, status=429)
 
         # Call utils — this will generate OTP, hash it, save, send mail
-        # success, msg = send_otp_email(profile, user.email, profile.name or user.username, purpose="password reset")
         send_otp_email_async(profile, user.email, profile.name or user.username, purpose="password reset")
         success, msg = True, "OTP sent successfully."
 

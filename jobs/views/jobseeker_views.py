@@ -1,7 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view
 from django.shortcuts import get_object_or_404
+from django.utils.timezone import now
+
 
 from jobs.models import Job, Application, SavedJob
 from jobs.serializers.jobseeker_serializers import AppliedJobSerializer
@@ -17,6 +20,12 @@ class ApplyToJobView(APIView):
 
         if profile.role != 'jobseeker':
             return Response({"message": "Only jobseekers can apply."}, status=403)
+        
+        if job.deadline < now().date():
+            return Response({"message": "This job has expired."}, status=400)
+        
+        if not profile.resume:
+            return Response({"message": "Please upload your resume before applying."}, status=400)
 
         application, created = Application.objects.get_or_create(applicant=profile, job=job)
 
@@ -45,8 +54,13 @@ class SaveJobView(APIView):
 
     def post(self, request, id):
         job = get_object_or_404(Job, id=id)
-        SavedJob.objects.get_or_create(user=request.user, job=job)
-        return Response({"message": "Job saved successfully."}, status=201)
+        if job.deadline < now().date():
+            return Response({"message": "This job has expired and cannot be saved."}, status=400)
+        saved, created = SavedJob.objects.get_or_create(user=request.user, job=job)
+        if created:
+            return Response({"message": "Job saved successfully."}, status=201)
+        return Response({"message": "Job already saved."}, status=400)
+
 
     def delete(self, request, id):
         SavedJob.objects.filter(user=request.user, job_id=id).delete()
@@ -57,23 +71,21 @@ class SavedJobsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        saved = SavedJob.objects.filter(user=request.user).select_related('job')
-        jobs = [entry.job for entry in saved]
+        jobs = Job.objects.filter(savedjob__user=request.user, deadline__gte=now().date())
         serializer = JobBasicSerializer(jobs, many=True)
         return Response(serializer.data)
 
 
-
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-
 @api_view(['GET'])
 def get_filter_options(request):
-    locations = Job.objects.values_list('location', flat=True).distinct()
-    profiles = Job.objects.values_list('title', flat=True).distinct()
-    
+    # Filter only active jobs
+    active_jobs = Job.objects.filter(deadline__gte=now())
+
+    # Get distinct locations and job titles
+    locations = active_jobs.values_list('location', flat=True).distinct()
+    profiles = active_jobs.values_list('title', flat=True).distinct()
+
     return Response({
         "locations": sorted(locations),
         "profiles": sorted(profiles),
     })
-
