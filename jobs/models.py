@@ -1,8 +1,27 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from accounts.models import Profile
+from cloudinary_storage.storage import MediaCloudinaryStorage 
 
 User = get_user_model()
+
+class Company(models.Model):
+    name = models.CharField(max_length=255)
+    logo = models.ImageField(
+        upload_to="company_logos/",
+        storage=MediaCloudinaryStorage(),
+        null=True,
+        blank=True
+    )
+    owner = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="company"
+    )
+
+    def __str__(self):
+        return self.name
+
 
 class Job(models.Model):
     JOB_TYPE_CHOICES = [
@@ -14,14 +33,20 @@ class Job(models.Model):
     ]
 
     title = models.CharField(max_length=255)
-    company = models.CharField(max_length=255)
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="jobs",
+        null=False,   
+        blank=False  
+    )
     location = models.CharField(max_length=100)
     ctc = models.CharField(max_length=50)
     experience = models.CharField(max_length=100)
     deadline = models.DateField()
 
     job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES)
-    logo_url = models.URLField(blank=True, null=True)
+
     description = models.TextField()
 
     responsibilities = models.JSONField(default=list)

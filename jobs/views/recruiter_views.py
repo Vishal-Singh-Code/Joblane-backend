@@ -5,14 +5,15 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.exceptions import PermissionDenied
 from rest_framework import status
 
 
 
-from jobs.models import Job, Application
+from jobs.models import Job, Application,Company
 from jobs.serializers.recruiter_serializers import ApplicationSerializer, BasicApplicationSerializer
-from jobs.serializers.common_serializers import JobSerializer, JobBasicSerializer
+from jobs.serializers.common_serializers import JobSerializer, JobBasicSerializer,CompanySerializer
 
 
 
@@ -20,8 +21,9 @@ class RecruiterJobViewSet(viewsets.ModelViewSet):
     serializer_class = JobSerializer
     permission_classes = [IsAuthenticated]
 
+
     def get_queryset(self):
-        return Job.objects.filter(created_by=self.request.user).order_by('-created_at')
+        return Job.objects.filter(created_by=self.request.user).select_related("company").order_by('-created_at')
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -29,9 +31,15 @@ class RecruiterJobViewSet(viewsets.ModelViewSet):
         return JobSerializer
 
     def perform_create(self, serializer):
-        if self.request.user.profile.role != 'recruiter':
+        user = self.request.user
+
+        if user.profile.role != 'recruiter':
             raise PermissionDenied("Only recruiters can create jobs.")
-        serializer.save(created_by=self.request.user)
+        
+        if not hasattr(user, "company"):
+            raise PermissionDenied("Create company profile before posting jobs.")
+
+        serializer.save(created_by=user, company=user.company  )
 
 class JobApplicantsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -82,3 +90,15 @@ def update_application_status(request, pk):
 
     except Application.DoesNotExist:
         return Response({'error': 'Application not found'}, status=404)
+
+
+class CompanyAPIView(generics.RetrieveUpdateAPIView):
+    serializer_class = CompanySerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_object(self):
+        company, _ = Company.objects.get_or_create(
+            owner=self.request.user
+        )
+        return company
