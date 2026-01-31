@@ -28,12 +28,13 @@ class Profile(models.Model):
     location = models.CharField(max_length=100, blank=True)
     dob = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=10, blank=True)
-    skills = models.JSONField(default=list)
+    skills = models.JSONField(default=list, blank=True)
     resume = models.FileField(upload_to='resumes/', null=True, blank=True, storage=RawMediaCloudinaryStorage())
     profile_pic = models.ImageField(upload_to='profiles/', null=True, blank=True,storage=MediaCloudinaryStorage())
 
     def __str__(self):
-        return self.name
+        return self.name or self.user.email
+
 
 class PendingUser(models.Model):
     ROLE_CHOICES = (
@@ -42,7 +43,7 @@ class PendingUser(models.Model):
     )
 
     email = models.EmailField(unique=True)
-    username = models.CharField(max_length=150)
+    username = models.CharField(max_length=150, blank=True)
     password = models.CharField(max_length=128)
     name = models.CharField(max_length=100)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='jobseeker')
@@ -59,3 +60,6 @@ class PendingUser(models.Model):
     def set_password(self, raw_password):
         """Hash the password like Django does for real User."""
         self.password = make_password(raw_password)
+
+    def __str__(self):
+        return self.email

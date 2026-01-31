@@ -1,4 +1,4 @@
-import os
+import os, sys
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -12,7 +12,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -28,8 +28,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'jobs',
     'accounts.apps.AccountsConfig',
-    'cloudinary_storage',
     'cloudinary',
+    'cloudinary_storage',
 ]
 
 MIDDLEWARE = [
@@ -47,8 +47,28 @@ MIDDLEWARE = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+     "DEFAULT_THROTTLE_RATES": {
+          # Generic
+        "anon": "20/min",
+        "user": "100/min",
+        # custom
+        "register": "3/min",
+        "send_otp":"5/min",
+        "verify_otp":"1/min",
+
+        "forgot_password":"2/min",
+        "verify_forgot_otp":"2/min",
+        "reset_password":"2/min",
+        "login":"2/min",
+        "google_login":"5/min",
+    }
 }
+
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
@@ -109,9 +129,21 @@ WSGI_APPLICATION = 'joblane.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'), conn_max_age=600, ssl_require=True)
-}
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'test_db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=True,
+        )
+    }
 
 
 # Password validation
@@ -163,6 +195,22 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # DEFAULT_FROM_EMAIL = "noreply@joblane.com"
 
+if DEBUG:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Joblane<www.vishal123singh007@gmail.com>")
+EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "console")
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+
+
+AUTHENTICATION_BACKENDS = [
+    "accounts.backends.UsernameOrEmailBackend",
+    "django.contrib.auth.backends.ModelBackend", 
+]
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
+
+
 
