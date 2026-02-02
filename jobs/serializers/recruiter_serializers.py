@@ -12,12 +12,14 @@ class ApplicationSerializer(serializers.ModelSerializer):
         model = Application
         fields = ['id', 'applicant', 'job', 'applied_at', 'status']
 
+
 class BasicApplicationSerializer(serializers.ModelSerializer):
-    applicant_name = serializers.CharField(source='applicant.name')
-    applicant_email = serializers.EmailField(source='applicant.user.email')
-    status = serializers.CharField()
+    applicant_name = serializers.CharField(source='applicant.name', read_only=True)
+    applicant_email = serializers.EmailField(source='applicant.user.email', read_only=True)
+    status = serializers.CharField(read_only=True)
 
     class Meta:
         model = Application
-        fields = ['id', 'applicant_name', 'applicant_email', 'status' , 'applied_at']
+        fields = ['id', 'applicant_name', 'applicant_email', 'status', 'applied_at']
+
 

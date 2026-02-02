@@ -1,26 +1,23 @@
-from rest_framework import generics
 from django.shortcuts import get_object_or_404
-from rest_framework.views import APIView
-from rest_framework import viewsets
+
+from rest_framework import generics, viewsets,status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.exceptions import PermissionDenied
-from rest_framework import status
 
-
-
-from jobs.models import Job, Application,Company
+# local import
+from jobs.models import Job, Application, Company
 from jobs.serializers.recruiter_serializers import ApplicationSerializer, BasicApplicationSerializer
-from jobs.serializers.common_serializers import JobSerializer, JobBasicSerializer,CompanySerializer
+from jobs.serializers.common_serializers import JobSerializer, JobBasicSerializer, CompanySerializer
+from jobs.permissions import IsRecruiter, IsJobOwner
+from jobs.pagination import StandardPagination
 
 
 
 class RecruiterJobViewSet(viewsets.ModelViewSet):
     serializer_class = JobSerializer
-    permission_classes = [IsAuthenticated]
-
+    permission_classes = [IsAuthenticated, IsRecruiter]
 
     def get_queryset(self):
         return Job.objects.filter(created_by=self.request.user).select_related("company").order_by('-created_at')
@@ -32,73 +29,56 @@ class RecruiterJobViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-
-        if user.profile.role != 'recruiter':
-            raise PermissionDenied("Only recruiters can create jobs.")
         
         if not hasattr(user, "company"):
             raise PermissionDenied("Create company profile before posting jobs.")
 
-        serializer.save(created_by=user, company=user.company  )
-
-class JobApplicantsView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, job_id):
-        job = get_object_or_404(Job, id=job_id)
-
-        if job.created_by != request.user:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
-
-        applications = Application.objects.filter(job=job).select_related('applicant__user')
-        serializer = BasicApplicationSerializer(applications, many=True, context={'request': request})
-        return Response(serializer.data)
+        serializer.save(created_by=user, company=user.company)
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def applicant_detail(request, pk):
-    try:
-        application = Application.objects.select_related('job__created_by', 'applicant__user').get(pk=pk)
-        if application.job.created_by != request.user:
-            return Response({'error': 'Unauthorized access'}, status=status.HTTP_403_FORBIDDEN)
+class JobApplicantsView(generics.ListAPIView):
+    serializer_class = BasicApplicationSerializer
+    permission_classes = [IsAuthenticated, IsRecruiter, IsJobOwner]
+    pagination_class = StandardPagination
 
-        serializer = ApplicationSerializer(application, context={'request': request})
-        return Response(serializer.data, status=200)
-    except Application.DoesNotExist:
-        return Response({'error': 'Application not found'}, status=404)
+    def get_job(self):
+        return get_object_or_404(Job, id=self.kwargs['job_id'])
+
+    def get_queryset(self):
+        job = self.get_job()
+        self.check_object_permissions(self.request, job)
+        return (Application.objects.filter(job=job).select_related('applicant__user'))
 
 
-@api_view(['PATCH'])
-@permission_classes([IsAuthenticated])
-def update_application_status(request, pk):
-    try:
-        application = Application.objects.select_related('job__created_by').get(pk=pk)
-        if application.job.created_by != request.user:
-            return Response({'error': 'Unauthorized access'}, status=status.HTTP_403_FORBIDDEN)
+class ApplicantDetailView(generics.RetrieveAPIView):
+    serializer_class = ApplicationSerializer
+    permission_classes = [IsAuthenticated, IsRecruiter,IsJobOwner]
+    queryset = Application.objects.select_related('job__created_by', 'applicant__user')
 
-        new_status = request.data.get('status')
 
-        if new_status not in ['Pending', 'Shortlisted', 'Rejected']:
-            return Response({'error': 'Invalid status value'}, status=400)
+class UpdateApplicationStatusView(generics.UpdateAPIView):
+    serializer_class = ApplicationSerializer
+    permission_classes = [IsAuthenticated, IsRecruiter,IsJobOwner]
+    queryset = Application.objects.select_related('job__created_by')
 
-        application.status = new_status
+    def patch(self, request, *args, **kwargs):
+        application = self.get_object()
+        status_value = request.data.get("status")
+
+        if status_value not in Application.Status.values:
+            return Response({"error": "Invalid status value"}, status=status.HTTP_400_BAD_REQUEST)
+
+        application.status = status_value
         application.save()
 
-        serializer = ApplicationSerializer(application, context={'request': request})
-        return Response(serializer.data, status=200)
-
-    except Application.DoesNotExist:
-        return Response({'error': 'Application not found'}, status=404)
+        return Response(self.get_serializer(application).data, status=status.HTTP_200_OK)
 
 
 class CompanyAPIView(generics.RetrieveUpdateAPIView):
     serializer_class = CompanySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsRecruiter]
     parser_classes = [MultiPartParser, FormParser]
 
     def get_object(self):
-        company, _ = Company.objects.get_or_create(
-            owner=self.request.user
-        )
+        company, _ = Company.objects.get_or_create(owner=self.request.user)
         return company

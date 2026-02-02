@@ -1,18 +1,60 @@
+from django.utils.timezone import localdate
+from django.db import models
+from django.db.models import Count, Exists, OuterRef
 from rest_framework import generics
-from django.utils.timezone import now
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 
 # local imports
 from jobs.serializers.common_serializers import JobSerializer, JobBasicSerializer
-from jobs.models import Job
+from jobs.models import Job, Application, SavedJob
+from jobs.pagination import StandardPagination
 
 
 class JobListAPIView(generics.ListAPIView):
+    permission_classes = [AllowAny]
     serializer_class = JobBasicSerializer
+    pagination_class = StandardPagination
+
     def get_queryset(self):
-        return Job.objects.filter(deadline__gte=now()).order_by('-created_at')
+        return Job.objects.filter(deadline__gte=localdate()).select_related('company').annotate(applicant_count=Count('applications', distinct=True)).order_by('-created_at')
+
 
 class JobDetailAPIView(generics.RetrieveAPIView):
-    queryset = Job.objects.all()
+    permission_classes = [IsAuthenticated]
     serializer_class = JobSerializer
     lookup_field = 'id'
+
+    def get_queryset(self):
+        user = self.request.user
+
+        qs = (
+            Job.objects
+            .select_related('company', 'created_by')
+            .annotate(
+                applicants_count=Count('applications', distinct=True),
+            )
+        )
+
+        if user.is_authenticated and hasattr(user, 'profile'):
+            qs = qs.annotate(
+                has_applied=Exists(
+                    Application.objects.filter(
+                        applicant=user.profile,
+                        job=OuterRef('pk')
+                    )
+                ),
+                is_saved=Exists(
+                    SavedJob.objects.filter(
+                        user=user,
+                        job=OuterRef('pk')
+                    )
+                )
+            )
+        else:
+            qs = qs.annotate(
+                has_applied=models.Value(False, output_field=models.BooleanField()),
+                is_saved=models.Value(False, output_field=models.BooleanField()),
+            )
+
+        return qs

@@ -12,7 +12,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -33,9 +33,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -53,7 +53,7 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
     ],
      "DEFAULT_THROTTLE_RATES": {
-          # Generic
+        # Generic
         "anon": "20/min",
         "user": "100/min",
         # custom
@@ -66,9 +66,10 @@ REST_FRAMEWORK = {
         "reset_password":"2/min",
         "login":"2/min",
         "google_login":"5/min",
-    }
+    },
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
 }
-
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
@@ -79,8 +80,7 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
-CORS_ALLOW_ALL_ORIGINS = True
-
+CORS_ALLOW_ALL_ORIGINS = DEBUG
 
 # --- PLACE CLOUDINARY_STORAGE CONFIGURATION HERE ---
 CLOUDINARY_STORAGE = {
@@ -92,7 +92,6 @@ CLOUDINARY_STORAGE = {
 # --- IMPORTANT: Move DEFAULT_FILE_STORAGE here, after CLOUDINARY_STORAGE is defined ---
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
@@ -100,7 +99,7 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'DENY'
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://joblane-frontend.vercel.app',
+    'https://*.vercel.app',
     'https://*.onrender.com',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
@@ -191,16 +190,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# for Development only
-# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-# DEFAULT_FROM_EMAIL = "noreply@joblane.com"
 
 if DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Joblane<www.vishal123singh007@gmail.com>")
 EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "console")
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Joblane <noreply@joblane.com>")
 
 
 AUTHENTICATION_BACKENDS = [
