@@ -3,6 +3,10 @@ from django.db import models
 from django.db.models import Count, Exists, OuterRef
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from jobs.filters import JobFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter
+
 
 
 # local imports
@@ -15,6 +19,10 @@ class JobListAPIView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = JobBasicSerializer
     pagination_class = StandardPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter]  # 👈 REQUIRED
+
+    filterset_class = JobFilter
+    search_fields = ["title", "company__name", "location"]
 
     def get_queryset(self):
         return Job.objects.filter(deadline__gte=localdate()).select_related('company').annotate(applicant_count=Count('applications', distinct=True)).order_by('-created_at')

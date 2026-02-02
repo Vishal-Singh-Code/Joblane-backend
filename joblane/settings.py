@@ -16,6 +16,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
 # Application definition
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -31,6 +32,50 @@ INSTALLED_APPS = [
     'cloudinary',
     'cloudinary_storage',
 ]
+
+JAZZMIN_SETTINGS = {
+    "site_title": "Joblane Admin",
+    "site_header": "Joblane",
+    "site_brand": "Joblane",
+    "welcome_sign": "Welcome to Joblane Admin",
+    "navigation_expanded": True,
+
+  "icons": {
+        # Accounts
+        "accounts.Profile": "fas fa-id-card",
+        "accounts.PendingUser": "fas fa-user-clock",
+
+        # Jobs
+        "jobs.Job": "fas fa-briefcase",
+        "jobs.Application": "fas fa-file-signature",
+        "jobs.SavedJob": "fas fa-bookmark",
+
+        # Company
+        "jobs.Company": "fas fa-building",
+
+        # Django auth
+        "auth.User": "fas fa-user",
+        "auth.Group":"fas fa-users-cog",
+        "django.contrib.auth.models.Group": "fas fa-users-cog",
+        "django.contrib.auth.models.Permission": "fas fa-key",
+    },
+
+    "search_model": [
+        "accounts.User",
+        "jobs.Job",
+    ],
+
+    "topmenu_links": [
+        {"name": "Frontend", "url": os.getenv("GOOGLE_REDIRECT_URI", "/"), "new_window": True},
+    ],
+
+    "order_with_respect_to": [
+        "accounts.User",
+        "accounts.PendingUser",
+        "jobs.Job",
+    ],
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

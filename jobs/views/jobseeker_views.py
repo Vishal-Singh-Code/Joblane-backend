@@ -99,7 +99,6 @@ class SavedJobsView(generics.ListAPIView):
 
 
 class JobFilterOptionsView(APIView):
-    permission_classes = [IsAuthenticated, IsJobSeeker]
 
     def get(self, request):
         active_jobs = Job.objects.filter(deadline__gte=localdate())
