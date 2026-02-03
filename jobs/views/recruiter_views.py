@@ -12,15 +12,23 @@ from jobs.serializers.recruiter_serializers import ApplicationSerializer, BasicA
 from jobs.serializers.common_serializers import JobSerializer, JobBasicSerializer, CompanySerializer
 from jobs.permissions import IsRecruiter, IsJobOwner
 from jobs.pagination import StandardPagination
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django.db.models import Count
 
 
 
 class RecruiterJobViewSet(viewsets.ModelViewSet):
     serializer_class = JobSerializer
     permission_classes = [IsAuthenticated, IsRecruiter]
+    pagination_class = StandardPagination
+    filter_backends = [SearchFilter, OrderingFilter]
+
+    search_fields = ['title', 'company__name', 'location']
+    ordering_fields = ['created_at', 'deadline', 'applicant_count']
+    ordering = ['-created_at']
 
     def get_queryset(self):
-        return Job.objects.filter(created_by=self.request.user).select_related("company").order_by('-created_at')
+        return Job.objects.filter(created_by=self.request.user).annotate(applicant_count=Count("applications")).select_related("company").order_by('-created_at')
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -40,6 +48,15 @@ class JobApplicantsView(generics.ListAPIView):
     serializer_class = BasicApplicationSerializer
     permission_classes = [IsAuthenticated, IsRecruiter, IsJobOwner]
     pagination_class = StandardPagination
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = [
+    'applicant__user__first_name',
+    'applicant__user__last_name',
+    'applicant__user__email',
+    ]
+    ordering_fields = ['applied_at', 'status']
+    ordering = ['-applied_at']
+
 
     def get_job(self):
         return get_object_or_404(Job, id=self.kwargs['job_id'])
