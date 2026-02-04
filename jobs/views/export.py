@@ -1,17 +1,15 @@
-# jobs/export.py
-
-import openpyxl
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from django.http import HttpResponse
-from django.contrib.auth.decorators import login_required
+import openpyxl
 from django.utils.timezone import localtime
-
 from jobs.models import Application
 
-
-@login_required
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def export_applicants(request):
     job_id = request.GET.get("job_id")
-    status = request.GET.get("status")  
+    status = request.GET.get("status")
 
     qs = Application.objects.select_related("applicant", "job")
 
@@ -25,7 +23,6 @@ def export_applicants(request):
     ws = wb.active
     ws.title = "Applicants"
 
-    # Header
     ws.append([
         "Applicant Name",
         "Email",
@@ -48,9 +45,6 @@ def export_applicants(request):
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response["Content-Disposition"] = (
-        'attachment; filename="applicants.xlsx"'
-    )
-
+    response["Content-Disposition"] = 'attachment; filename="applicants.xlsx"'
     wb.save(response)
     return response
