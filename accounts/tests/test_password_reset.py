@@ -6,7 +6,7 @@ from accounts.models import Profile
 from unittest.mock import patch
 
 RESET_TOKEN_SALT = "password-reset"
-RESET_TOKEN_MAX_AGE_SECONDS = 15 * 60  # 15 minutes (adjust as desired)
+RESET_TOKEN_MAX_AGE_SECONDS = 15 * 60 
 DAILY_RESEND_LIMIT = 5
 
 from django.core.cache import cache

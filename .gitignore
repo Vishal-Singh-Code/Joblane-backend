@@ -17,6 +17,8 @@ media/
 
 # Environment Variables
 .env
+.env.docker
+.env.prod
 
 # System files
 .DS_Store

@@ -1,0 +1,21 @@
+services:
+  web:
+    image: vishalcode24/joblane-backend:latest
+    container_name: joblane-backend
+    env_file:
+      - .env.docker
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    container_name: joblane-db
+    env_file:
+      - .env.docker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
