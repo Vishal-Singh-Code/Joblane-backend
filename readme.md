@@ -1,22 +1,51 @@
 # JobLane Backend
 
-**JobLane** is India’s #1 Hiring Platform built using **Django** and **Django REST Framework (DRF)**. This repository contains the backend API for the JobLane application, providing robust and secure services for job seekers and recruiters.
+**JobLane** is a scalable, production-ready backend for a job hiring platform built using **Django REST Framework** (DRF).  
+It powers secure authentication, role-based access, job management, applications, and admin analytics for the JobLane platform.  
 
-The backend handles authentication, job postings, applications, user roles, and API endpoints, serving the React.js frontend of the platform.
+This repository serves the **RESTful API** consumed by the React.js frontend.
 
----
+
+## Key Highlights
+
+- JWT authentication with refresh token rotation
+- Email-based OTP verification (registration & password reset)
+- Google OAuth2 login integration
+- Role-based access control (Job Seeker, Recruiter, Admin)
+- Resume uploads using Cloudinary
+- Admin analytics dashboard with Django Jazzmin
+- Rate-limited APIs using DRF throttling
+- Production-ready deployment on Render
 
 ## Features
 
-- JWT Authentication with **dj-rest-auth**
-- Google OAuth2 Login Integration
-- Role-based access for **Job Seekers** and **Recruiters**
-- Job posting, updating, and deletion for recruiters
-- Applying to jobs for job seekers
-- View applicants for each job post
-- RESTful API with Django REST Framework
+### Job Seekers
+- User registration with email OTP verification
+- Login using JWT or Google OAuth
+- Browse and search job listings
+- Apply for jobs with resume upload
+- Save jobs for later
+- Manage profile information
 
----
+### Recruiters
+- Recruiter-specific job management
+- Create, update, and delete job postings
+- View applicants for posted jobs
+- Access control for recruiter-only actions
+
+### Admin
+- Custom Django admin using Jazzmin
+- Admin analytics dashboard
+- User, job, and application management
+- Platform-level monitoring
+
+### Authentication & Security
+- JWT authentication using SimpleJWT
+- Refresh token rotation & blacklisting
+- Email-based OTP verification
+- Google OAuth2 login
+- Custom authentication backend (username/email)
+
 
 ## Tech Stack
 
@@ -24,16 +53,16 @@ The backend handles authentication, job postings, applications, user roles, and 
 - Django 5.x
 - Django REST Framework
 - PostgreSQL (NeonDB)
-- dj-rest-auth & SimpleJWT
-
----
+- dj-rest-auth
+- SimpleJWT
+- Cloudinary (media storage)
+- Jazzmin (admin UI)
+- Whitenoise (static file handling)
 
 ## Live Demo
-
 Backend: [https://joblane-backend-0eqs.onrender.com/](https://joblane-backend-0eqs.onrender.com/)  
 Frontend: [https://joblane-frontend.vercel.app/](https://joblane-frontend.vercel.app/)
 
----
 
 ## Setup Instructions
 
@@ -107,6 +136,18 @@ joblane-backend/
 | `/api/applicants/{id}/`  | GET    | View applicants for a job (Recruiter) |
 
 
+## Future Enhancements
+
+- AI-based job recommendation engine
+- Resume parsing & skill extraction
+- Real-time notifications (WebSockets)
+- Advanced analytics & reporting
+- Audit logs for admin actions
+
 ## Contributing
 Contributions, bug reports, and feature requests are welcome!
-Feel free to open an issue or submit a pull request.
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Open a pull request

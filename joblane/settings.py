@@ -34,11 +34,16 @@ INSTALLED_APPS = [
 ]
 
 JAZZMIN_SETTINGS = {
-    "site_title": "Joblane Admin",
-    "site_header": "Joblane",
-    "site_brand": "Joblane",
-    "welcome_sign": "Welcome to Joblane Admin",
+    "site_title": "JobLane Admin",
+    "site_header": "JobLane",
+    "site_brand": "JobLane",
+    "welcome_sign": "Welcome to JobLane Admin",
     "navigation_expanded": True,
+
+    "site_logo": "images/logo.png",
+    "site_logo_classes": "img-circle elevation-3",
+    "site_icon": "images/logo.png",
+    "login_logo": "images/login.png",
 
   "icons": {
         # Accounts
@@ -222,6 +227,9 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
