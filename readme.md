@@ -87,6 +87,25 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+## Docker Setup
+Make sure Docker & Docker Compose are installed on your system.
+
+### 1. Start the App
+```
+docker-compose up --build
+```
+
+### 2. Stop the App
+```
+docker-compose down
+```
+
+### 3. Run Django Commands Inside Docker
+```
+docker-compose exec web python manage.py migrate
+docker-compose exec web python manage.py createsuperuser
+```
+
 ## Environment Variables
 ```
 # Django Secret Key
@@ -108,6 +127,11 @@ DATABASE_URL=your-database-url
 CLOUDINARY_CLOUD_NAME=your-cloud-name
 CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
+
+#Google Auth
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=secret
+GOOGLE_REDIRECT_URI=http://localhost:5173
 ```
 
 ## Project Structure
@@ -121,19 +145,38 @@ joblane-backend/
 └── manage.py
 ```
 ## API Endpoints Overview
-| Endpoint                 | Method | Description                           |
-| ------------------------ | ------ | ------------------------------------- |
-| `/api/login/`            | POST   | Obtain JWT access & refresh tokens    |
-| `/api/register/`         | POST   | User registration                     |
-| `/api/google/login/`     | POST   | Google social login                   |
-| `/api/profile/`          | GET    | Get user profile                      |
-| `/api/jobs/`             | GET    | List all job posts                    |
-| `/api/jobs/{id}/`        | GET    | Retrieve single job details           |
-| `/api/jobs/create/`      | POST   | Create new job post (Recruiter only)  |
-| `/api/jobs/update/{id}/` | PUT    | Update job post (Recruiter only)      |
-| `/api/jobs/delete/{id}/` | DELETE | Delete job post (Recruiter only)      |
-| `/api/apply/`            | POST   | Apply to job (Jobseeker only)         |
-| `/api/applicants/{id}/`  | GET    | View applicants for a job (Recruiter) |
+
+### Authentication APIs
+| Endpoint          | Method | Description                        |
+| ----------------- | ------ | ---------------------------------- |
+| `/auth/login/`    | POST   | Obtain JWT access & refresh tokens |
+| `/auth/register/` | POST   | User registration                  |
+| `/auth/google/`   | POST   | Google social login                |
+| `/auth/profile/`  | GET    | Get authenticated user profile     |
+
+### Jobseeker APIs
+| Endpoint                | Method | Description                         |
+| ----------------------- | ------ | ----------------------------------- |
+| `/api/jobs/`            | GET    | List all job posts                  |
+| `/api/jobs/{id}/`       | GET    | Retrieve single job details         |
+| `/api/jobs/{id}/apply/` | POST   | Apply to a job                      |
+| `/api/applied/`         | GET    | List jobs applied by logged-in user |
+| `/api/jobs/{id}/save/`  | POST   | Save a job                          |
+| `/api/saved/`           | GET    | List saved jobs                     |
+| `/api/filters/`         | GET    | Get job filter options              |
+
+### Recruiter APIs
+| Endpoint                                   | Method    | Description                    |
+| ------------------------------------------ | --------- | ------------------------------ |
+| `/api/recruiter/jobs/`                     | GET       | List recruiter’s jobs          |
+| `/api/recruiter/jobs/`                     | POST      | Create a new job               |
+| `/api/recruiter/jobs/{id}/`                | PUT       | Update recruiter job           |
+| `/api/recruiter/jobs/{id}/`                | DELETE    | Delete recruiter job           |
+| `/api/recruiter/jobs/{job_id}/applicants/` | GET       | View applicants for a job      |
+| `/api/recruiter/applicants/{id}/`          | GET       | View applicant details         |
+| `/api/recruiter/applicants/{id}/status/`   | PATCH     | Update application status      |
+| `/api/recruiter/company/`                  | GET / PUT | View or update company profile |
+| `/api/recruiter/applicants/export/`        | GET       | Export applicants (Excel)  |
 
 
 ## Future Enhancements
