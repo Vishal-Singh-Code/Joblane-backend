@@ -32,8 +32,17 @@ class JobFilter(django_filters.FilterSet):
         return queryset.filter(q)
 
     def filter_experience(self, queryset, name, value):
+        fresher_query = (
+            Q(experience__iexact="0")
+            | Q(experience__iexact="0 years")
+            | Q(experience__iexact="0 year")
+            | Q(experience__iexact="fresher")
+            | Q(experience__regex=r"^0\s*[-to]")
+            | Q(experience__istartswith="0+")
+        )
+
         if value == "Fresher":
-            return queryset.filter(experience=0)
+            return queryset.filter(fresher_query)
         if value == "Experienced":
-            return queryset.filter(experience__gt=0)
+            return queryset.exclude(fresher_query)
         return queryset

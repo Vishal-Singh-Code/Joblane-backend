@@ -180,11 +180,12 @@ class VerifyOtpView(APIView):
                     )
 
                 # Create real user
-                user = User.objects.create_user(
+                user = User.objects.create(
                     username=pending_user.username,
                     email=pending_user.email,
-                    password=pending_user.password,
                 )
+                user.password = pending_user.password
+                user.save(update_fields=["password"])
 
                 profile = user.profile
                 profile.name = pending_user.name
@@ -207,6 +208,9 @@ class VerifyOtpView(APIView):
         return Response(
             {
                 "message": "OTP verified successfully! Registration complete.",
+                "id": user.id,
+                "name": profile.name,
+                "email": user.email,
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
                 "role": profile.role,
@@ -413,9 +417,8 @@ class VerifyForgotOtpView(APIView):
         email = serializer.validated_data["email"]
         otp = serializer.validated_data["otp"]
 
-        try:
-            user = User.objects.only("id", "email", "username").filter(email=email).first()
-        except User.DoesNotExist:
+        user = User.objects.only("id", "email", "username").filter(email=email).first()
+        if user is None:
             return Response({"error": "Invalid request."}, status=400)
 
         profile, _ = Profile.objects.get_or_create(user=user)
@@ -487,9 +490,8 @@ class ResetPasswordView(APIView):
         if not email:
             return Response({"error": "Invalid reset token."}, status=400)
 
-        try:
-            user = User.objects.only("id", "email", "username").filter(email=email).first()
-        except User.DoesNotExist:
+        user = User.objects.only("id", "email", "username").filter(email=email).first()
+        if user is None:
             return Response({"error": "Invalid reset token."}, status=400)
 
         with transaction.atomic():

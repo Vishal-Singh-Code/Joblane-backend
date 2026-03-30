@@ -142,7 +142,7 @@ CLOUDINARY_STORAGE = {
 # --- IMPORTANT: Move DEFAULT_FILE_STORAGE here, after CLOUDINARY_STORAGE is defined ---
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-if not DEBUG:
+if not DEBUG and 'test' not in sys.argv:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
